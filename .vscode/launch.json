@@ -1,0 +1,39 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug exe",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/aoc.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "symbolSearchPath": "${workspaceFolder}/zig-out/bin",
+            "environment": [],
+            "logging": {
+                "moduleLoad": false
+            },
+            "preLaunchTask": "build",
+        },
+        {
+            // must emit the binary when running zig. Use
+            // >> zig test main.zig -femit-bin="my-test.exe"
+            "name": "Debug-Tests",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/my-test.exe",
+            "args": ["C:/D_Backup/Programs/Zig/zig-windows-x86_64-0.8.1/zig.exe"],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "symbolSearchPath": "${workspaceFolder}",
+            "environment": [],
+            "logging": {
+                "moduleLoad": false
+            },
+        }
+    ]
+}
