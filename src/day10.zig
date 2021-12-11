@@ -35,7 +35,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
     try lookup.put('>', .{.match = '<', .score = 25137});
 
     while (try line_iter.next()) |line| {
-        var is_corrupt = line_loop: for (line) |c, _| {
+        const is_corrupt = line_loop: for (line) |c, _| {
             switch (c) {
                 '(', '{', '<', '[' => try arr.append(c),
                 ')', '}', '>', ']' => {

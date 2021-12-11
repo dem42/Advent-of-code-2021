@@ -2,21 +2,18 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const String = utils.String;
 const print = utils.printAoc;
+const setDifference = utils.setDifference;
+const StaticBitSet = std.StaticBitSet;
 
-fn contains(pat: []const u8, dig: u8) bool {
-    var found = false;
-    for (pat) |dig2| {
-        if (dig2 == dig) {
-            found = true;
-            break;
-        }
-    }
-    return found;
+fn parseDigit(dig_str: []const u8) StaticBitSet(7) {
+    var res = StaticBitSet(7).initEmpty();
+    for (dig_str) |dig| res.set(dig - 'a');
+    return res;
 }
 
 pub fn solve(alloc: *std.mem.Allocator) !void {
     utils.g_part = .part2;
-    var line_iter = try utils.LineIterator(.{.buffer_size = 1024}).init(utils.InputType{.file = "../../inputs/day8.txt"});
+    var line_iter = try utils.LineIterator(.{.buffer_size = 1024}).init(utils.InputType{.file = "../../inputs/archive/day8.txt"});
     defer line_iter.deinit();
 
     var arr = std.ArrayList(i32).init(alloc);
@@ -24,105 +21,90 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
 
     var uniq_pat: usize = 0;
 
-    const digits = [_][7]u8{
-        [_]u8{1, 1, 1, 0, 1, 1, 1},
-        [_]u8{0, 0, 1, 0, 0, 1, 0},
-        [_]u8{1, 0, 1, 1, 1, 0, 1},
-        [_]u8{1, 0, 1, 1, 0, 1, 1},
-        [_]u8{0, 1, 1, 1, 0, 1, 0},
-        [_]u8{1, 1, 0, 1, 0, 1, 1},
-        [_]u8{1, 1, 0, 1, 1, 1, 1},
-        [_]u8{1, 0, 1, 0, 0, 1, 0},
-        [_]u8{1, 1, 1, 1, 1, 1, 1},
-        [_]u8{1, 1, 1, 1, 0, 1, 1},
+    const digits = [10]StaticBitSet(7) {
+        parseDigit("abcefg"),
+        parseDigit("cf"),
+        parseDigit("acdeg"),
+        parseDigit("acdfg"),
+        parseDigit("bcdf"),
+        parseDigit("abdfg"),
+        parseDigit("abdefg"),
+        parseDigit("acf"),
+        parseDigit("abcdefg"),
+        parseDigit("abcdfg"),
     };
 
     var sum: usize = 0;
     while (try line_iter.next()) |line| {
         var decode: [10]u8 = [_]u8{10} ** 10;
         var five_found: usize = 0;
-        var two_pat: [] const u8 = undefined;
-        var three_pat: [] const u8 = undefined;
-        var four_pat: [] const u8 = undefined;
-        var five_pat: [3][] const u8 = undefined;
-        var seven_pat: [] const u8 = undefined;
+        var two_pat = StaticBitSet(7).initEmpty();
+        var three_pat = StaticBitSet(7).initEmpty();
+        var four_pat = StaticBitSet(7).initEmpty();
+        var five_pat = [_]StaticBitSet(7) {StaticBitSet(7).initEmpty() } ** 3;
+        var seven_pat = StaticBitSet(7).initEmpty();
 
         var split_iter = std.mem.tokenize(line, "|");
         var sig_iter = std.mem.tokenize(split_iter.next().?, " ");
 
         five_found = 0;
         while (sig_iter.next()) |pat| {
-            if (pat.len == 2) {
-                two_pat = pat;
+            if (pat.len == 2 ) {
+                two_pat = parseDigit(pat);
             } else if (pat.len == 3) {
-                three_pat = pat;
+                three_pat = parseDigit(pat);
             } else if (pat.len == 4) {
-                four_pat = pat;
+                four_pat = parseDigit(pat);
             } else if (pat.len == 5) {
-                five_pat[five_found] = pat;
+                five_pat[five_found] = parseDigit(pat);
                 five_found += 1;
             } else if (pat.len == 7) {
-                seven_pat = pat;
+                seven_pat = parseDigit(pat);
             }
         }
 
         // method:
         // 3d minus 2d -> get val for a
+        const a_dig = setDifference(three_pat, two_pat).findFirstSet() orelse unreachable;
+        decode[a_dig] = 0;
+
         // 4d minus 7d -> find d/b digits (two)
+        const bd_digs = setDifference(four_pat, three_pat);
+        var bd_digs_iter = bd_digs.iterator(.{});
+
         // more common of d/b digs in 5 is d less is b
+        var b_dig: usize = 0;
+        while (bd_digs_iter.next()) |dig| {
+            var cnt: usize = 0;
+            for (five_pat) |fp| {
+                if (fp.isSet(dig)) cnt += 1;
+            }
+            if (cnt == 1) {
+                b_dig = dig;
+            }
+            decode[dig] = if (cnt == 1) 1 else 3;
+        }
+        const five = for (five_pat) |fp| {
+            if (fp.isSet(b_dig)) break fp;
+        } else unreachable;
+
         // c/f dig in 5 that has b is f the one that's not in is c
         // e/g dig in 5 that has b is g
-        // only unset dig is e
-        for (three_pat) |dig3| {
-            if (!contains(two_pat, dig3)) {
-                decode[dig3 - 'a'] = 0;
-            }
-        }
+        const ce_digs = setDifference(seven_pat, five);
+        const f_digs = setDifference(two_pat, ce_digs);
+        const c_digs = setDifference(two_pat, f_digs);
+        const e_digs = setDifference(ce_digs, c_digs);
 
-        for (four_pat) |dig4| {
-            if (contains(two_pat, dig4))
-                continue;
+        const f_dig = f_digs.findFirstSet() orelse unreachable;
+        decode[f_dig] = 5;
+        const c_dig = c_digs.findFirstSet() orelse unreachable;
+        decode[c_dig] = 2;
+        const e_dig = e_digs.findFirstSet() orelse unreachable;
+        decode[e_dig] = 4;
 
-            var cnt: usize = 0;
-            for (five_pat) |five_pat_item| {
-                if (contains(five_pat_item, dig4)) {
-                    cnt += 1;
-                }
-            }
-
-            if (cnt == 1) {
-
-                for (five_pat) |five_pat_item| {
-                    if (!contains(five_pat_item, dig4))
-                        continue;
-
-                    if (cnt == 1) {
-                        for (two_pat) |dig2| {
-                            if (contains(five_pat_item, dig2)) {
-                                decode[dig2 - 'a'] = 5;
-                            } else {
-                                decode[dig2 - 'a'] = 2;
-                            }
-                        }
-
-                        for (seven_pat) |dig7| {
-                            if (contains(five_pat_item, dig7) and decode[dig7 - 'a'] == 10) {
-                                decode[dig7 - 'a'] = 6;
-                            }
-                        }
-                    }
-                }
-
-                decode[dig4 - 'a'] = 1;
-            } else {
-                decode[dig4 - 'a'] = 3;
-            }
-        }
-
+        // only unset (val == 10) dig is e
         for (decode) |*dval| {
-            if (dval.* == 10) {
-                dval.* = 4;
-            }
+            if (dval.* == 10) dval.* = 6;
         }
 
         for (decode) |dval, i|
@@ -137,14 +119,11 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
             if (pat.len == 2 or pat.len == 3 or pat.len == 4 or pat.len == 7)
                 uniq_pat += 1;
 
-            var input_v: [7]u8 = [_]u8{0} ** 7;
-
-            for (pat) |item| {
-                input_v[decode[item-'a']] += 1;
-            }
+            var input = StaticBitSet(7).initEmpty();
+            for (pat) |item| input.set(decode[item-'a']);
 
             for (digits) |digit, i| {
-                if (std.mem.eql(u8, input_v[0..], digit[0..])) {
+                if (std.meta.eql(input, digit)) {
                     res_dig *= 10;
                     res_dig += i;
                     break;

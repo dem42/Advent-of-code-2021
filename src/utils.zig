@@ -3,6 +3,16 @@ const std = @import("std");
 ///////// String ///////////
 pub const String = std.ArrayList(u8);
 
+///////// Algorithms ///////////
+pub fn setDifference(left: anytype, right: @TypeOf(left)) @TypeOf(left) {
+    var result = @TypeOf(left).initEmpty();
+    var left_iter = left.iterator(.{});
+    while (left_iter.next()) |set_bit| {
+        if (!right.isSet(set_bit)) result.set(set_bit);
+    }
+    return result;
+}
+
 ///////// Sorting ///////////
 pub fn alphabetical(_: void, lhs: []const u8, rhs: []const u8) bool {
     var i: usize = 0;
