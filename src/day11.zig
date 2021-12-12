@@ -58,8 +58,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
 
     var grid: [10][10]Dumbo = undefined;
 
-    var row: usize = 0;
-    while (try line_iter.next()) |line| {
+    {var row: usize = 0; while (try line_iter.next()) |line| {
         for (line) |li, col| {
             grid[row][col] = Dumbo {
                 .r = @intCast(isize, row),
@@ -69,10 +68,9 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
             };
         }
         row += 1;
-    }
+    }}
 
-    var step: usize = 0;
-    while (step < 400) : (step += 1) {
+    {var step: usize = 0; while (step < 400) : (step += 1) {
         for (grid) |*dumbos| {
             for (dumbos) |*dumbo| {
                 updateDumbo(dumbo, &grid);
@@ -95,7 +93,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
         if (step < 100) {
             part1 += flashed;
         }
-    }
+    }}
 
     print("Part1: {}, Part2: {}\n", .{part1, part2});
 }
