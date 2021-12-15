@@ -93,7 +93,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
                 print("#",.{});
             }
             else {
-                print(".",.{});
+                print(" ",.{});
             }
         }}
         print("\n",.{});

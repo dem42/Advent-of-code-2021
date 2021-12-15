@@ -1,5 +1,5 @@
 const std = @import("std");
-const problem = @import("day13.zig");
+const problem = @import("day15.zig");
 
 pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

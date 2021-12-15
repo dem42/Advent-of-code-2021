@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/zig-out/bin/aoc.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/zig-out/bin",
+            "cwd": "${workspaceFolder}",
             "symbolSearchPath": "${workspaceFolder}/zig-out/bin",
             "environment": [],
             "logging": {
