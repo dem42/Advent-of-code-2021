@@ -19,10 +19,7 @@ const Sn = union(SnType) {
 
     fn clone(self: Sn, alloc: *std.mem.Allocator) error{OutOfMemory}!*Sn {
         var tempRoot = try alloc.create(Sn);
-        errdefer {
-            tempRoot.deinit(alloc);
-            alloc.destroy(tempRoot);
-        }
+        errdefer tempRoot.deinit(alloc);
 
         switch (self) {
             .Regular => |val| { tempRoot.* = Sn { .Regular = val}; },
@@ -127,20 +124,16 @@ const Sn = union(SnType) {
             .Regular => {},
             .Snail => |*tuple| {
                 tuple.left.deinit(alloc);
-                alloc.destroy(tuple.left);
                 tuple.right.deinit(alloc);
-                alloc.destroy(tuple.right);
             }
         }
+        alloc.destroy(self);
     }
 };
 
 fn parse(line: []const u8, i: *usize, alloc: *std.mem.Allocator) error{OutOfMemory}!*Sn {
     var tempRoot = try alloc.create(Sn);
-    errdefer {
-        tempRoot.deinit(alloc);
-        alloc.destroy(tempRoot);
-    }
+    errdefer tempRoot.deinit(alloc);
 
     if (line[i.*] == '[') {
         i.* += 1;
@@ -167,20 +160,14 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
 
     var fish = ArrayList(*Sn).init(alloc);
     defer {
-        for (fish.items) |fishy| {
-            fishy.deinit(alloc);
-            alloc.destroy(fishy);
-        }
+        for (fish.items) |fishy| fishy.deinit(alloc);
         fish.deinit();
     }
 
     while (try line_iter.next()) |line| {
         var i: usize = 0;
         var operand = try parse(line, &i, alloc);
-        errdefer {
-            operand.deinit(alloc);
-            alloc.destroy(operand);
-        }
+        errdefer operand.deinit(alloc);
         try fish.append(operand);
     }
 
@@ -193,10 +180,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
             var theFuck = try fish.items[sidx].clone(alloc);
             var root = try alloc.create(Sn);
             root.* = Sn {.Snail = .{.left = what, .right = theFuck}};
-            defer {
-                root.deinit(alloc);
-                alloc.destroy(root);
-            }
+            defer root.deinit(alloc);
 
             var reduced = true;
             while (reduced) {
@@ -227,7 +211,6 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
     }
     part1 = root.magnitude();
     root.deinit(alloc);
-    alloc.destroy(root);
 
     print("Part1: {}, Part2: {}\n", .{part1, part2});
 }
