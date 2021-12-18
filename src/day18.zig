@@ -176,21 +176,40 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
     while (fidx < fish.items.len) : (fidx += 1) {
         var sidx: usize = fidx + 1;
         while (sidx < fish.items.len) : (sidx += 1) {
-            var what = try fish.items[fidx].clone(alloc);
-            var theFuck = try fish.items[sidx].clone(alloc);
-            var root = try alloc.create(Sn);
-            root.* = Sn {.Snail = .{.left = what, .right = theFuck}};
-            defer root.deinit(alloc);
+            {
+                var what = try fish.items[fidx].clone(alloc);
+                var theFuck = try fish.items[sidx].clone(alloc);
+                var root = try alloc.create(Sn);
+                root.* = Sn {.Snail = .{.left = what, .right = theFuck}};
+                defer root.deinit(alloc);
 
-            var reduced = true;
-            while (reduced) {
-                reduced = false;
-                var shrapnel = root.explode(0, alloc);
-                if (shrapnel != null) reduced = true;
-                if (!reduced)
-                    root = try root.split(&reduced, alloc);
+                var reduced = true;
+                while (reduced) {
+                    reduced = false;
+                    var shrapnel = root.explode(0, alloc);
+                    if (shrapnel != null) reduced = true;
+                    if (!reduced)
+                        root = try root.split(&reduced, alloc);
+                }
+                max_mag = max(max_mag, root.magnitude());
             }
-            max_mag = max(max_mag, root.magnitude());
+            {
+                var what = try fish.items[fidx].clone(alloc);
+                var theFuck = try fish.items[sidx].clone(alloc);
+                var root = try alloc.create(Sn);
+                root.* = Sn {.Snail = .{.left = theFuck, .right = what}};
+                defer root.deinit(alloc);
+
+                var reduced = true;
+                while (reduced) {
+                    reduced = false;
+                    var shrapnel = root.explode(0, alloc);
+                    if (shrapnel != null) reduced = true;
+                    if (!reduced)
+                        root = try root.split(&reduced, alloc);
+                }
+                max_mag = max(max_mag, root.magnitude());
+            }
         }
     }
     part2 = max_mag;
