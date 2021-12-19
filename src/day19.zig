@@ -29,6 +29,14 @@ const Scanner = struct {
     dif: ?Pt,
     rot: ?usize,
     origin: ?Pt,
+
+    fn transformToCoordsOfOriginScanner(pt: *Pt, start_scanner: usize, scanners: []Scanner) void {
+        var prev_parent = start_scanner;
+        while (scanners[prev_parent].parent) |pp| {
+            pt.* = d(rot(pt.*, scanners[prev_parent].rot.?), scanners[prev_parent].dif.?);
+            prev_parent = pp;
+        }
+    }
 };
 
 fn cross(a: i8, b: i8) i8 {
@@ -114,13 +122,9 @@ fn irot(p1: Pt, rot_idx: usize) Pt {
 fn d(p2: Pt, p1: Pt) Pt {
     return Pt{.x = p2.x - p1.x, .y = p2.y - p1.y, .z = p2.z - p1.z};
 }
+
 fn add(p2: Pt, p1: Pt) Pt {
     return Pt{.x = p2.x + p1.x, .y = p2.y + p1.y, .z = p2.z + p1.z};
-}
-
-fn rotDif(p1: Pt, p2: Pt, rot_idx: usize) Pt {
-    var pd = d(p2, p1);
-    return rot(pd, rot_idx);
 }
 
 fn set(co: i8, tar: *isize, ds: [3]isize) void {
@@ -129,6 +133,121 @@ fn set(co: i8, tar: *isize, ds: [3]isize) void {
     const which = ds[aco - 1];
     tar.* = sign * which;
 }
+
+pub fn solve(alloc: *std.mem.Allocator) !void {
+    var part1: u64 = 0;
+    var part2: u64 = 0;
+
+    var line_iter = try utils.LineIterator(.{.buffer_size = 5000}).init(utils.InputType{.file = "inputs/day19.txt"});
+    defer line_iter.deinit();
+
+    var scanners = ArrayList(Scanner).init(alloc);
+    defer {
+        for (scanners.items) |*item| {
+            item.pts.deinit();
+        }
+        scanners.deinit();
+    }
+
+    {var scidx: usize = 0; while (try line_iter.next()) |line| {
+        if (line.len == 0) {
+            scidx += 1;
+            continue;
+        }
+        if (line[0] == '-' and line[1] == '-') {
+            const scan = Scanner {
+                .pts = ArrayList(Pt).init(alloc),
+                .checked = false,
+                .parent = null,
+                .dif = null,
+                .rot = null,
+                .origin = null,
+            };
+            try scanners.append(scan);
+            continue;
+        }
+        var tokens = std.mem.tokenize(line, ",");
+        try scanners.items[scidx].pts.append(Pt {
+            .x = try std.fmt.parseInt(isize, tokens.next().?, 10),
+            .y = try std.fmt.parseInt(isize, tokens.next().?, 10),
+            .z = try std.fmt.parseInt(isize, tokens.next().?, 10),
+        });
+    }}
+
+    var queue = ArrayList(usize).init(alloc);
+    defer queue.deinit();
+
+    try queue.append(0);
+    var zeroP = Pt{.x = 0, .y = 0, .z = 0};
+    scanners.items[0].origin = zeroP;
+
+    var rotated = HashSet(Pt).init(alloc);
+    defer rotated.deinit();
+
+    var uniq = HashSet(Pt).init(alloc);
+    defer uniq.deinit();
+    var cnt_map = HashMap(Pt, u8).init(alloc);
+    defer cnt_map.deinit();
+
+    while (queue.items.len > 0) {
+        const scidx = queue.pop();
+        if (scanners.items[scidx].checked) continue;
+        scanners.items[scidx].checked = true;
+
+        sc_loop: for (scanners.items) |sc, oscidx| {
+            if (oscidx == scidx or sc.checked) continue;
+
+            var rot_idx: usize = 0;
+            while (rot_idx < 24) : (rot_idx += 1) {
+                cnt_map.clearRetainingCapacity();
+                for (sc.pts.items) |p2, p2i| {
+                    const p2r = rot(p2, rot_idx);
+                    for (scanners.items[scidx].pts.items) |p1, p1i| {
+                        var cnt_up = try cnt_map.getOrPutValue(d(p2r, p1), 0);
+                        cnt_up.value_ptr.* += 1;
+                    }
+                }
+                var cnt_map_it = cnt_map.iterator();
+                while (cnt_map_it.next()) |kv| {
+                    if (kv.value_ptr.* < 12) continue;
+
+                    const dif = kv.key_ptr.*;
+                    scanners.items[oscidx].parent = scidx;
+                    scanners.items[oscidx].dif = dif;
+                    scanners.items[oscidx].rot = rot_idx;
+
+                    var origin = zeroP;
+                    Scanner.transformToCoordsOfOriginScanner(&origin, oscidx, scanners.items);
+                    scanners.items[oscidx].origin = origin;
+
+                    for (scanners.items[oscidx].pts.items) |pto| {
+                        var trans = pto;
+                        Scanner.transformToCoordsOfOriginScanner(&trans, oscidx, scanners.items);
+                        try uniq.put(trans, {});
+                    }
+
+                    try queue.append(oscidx);
+                    continue :sc_loop;
+                }
+            }
+        }
+    }
+    for (scanners.items[0].pts.items) |pto| {
+        try uniq.put(pto, {});
+    }
+    part1 = uniq.count();
+
+    for (scanners.items) |sc1, i| {
+        for (scanners.items) |sc2, j| {
+            const d1 = std.math.absCast(sc1.origin.?.x - sc2.origin.?.x);
+            const d2 = std.math.absCast(sc1.origin.?.y - sc2.origin.?.y);
+            const d3 = std.math.absCast(sc1.origin.?.z - sc2.origin.?.z);
+            part2 = max(part2, d1 + d2 + d3);
+        }
+    }
+    print("Part1: {}, Part2: {}\n", .{part1, part2});
+}
+
 test "Rot" {
     const p1 = Pt {.x = -4, .y = 2, .z = -3};
     const p2 = Pt {.x = -14, .y = -2, .z = 3};
@@ -162,153 +281,22 @@ test "Rot" {
 
 test "Rot Difs" {
     const p1 = Pt {.x = -4, .y = 2, .z = -3};
-    const p2 = Pt {.x = 6, .y = -3, .z = 1};
     {
-        const p3 = rotDif(p1, p2, 0);
-        try std.testing.expect(p3.x == 10);
-        try std.testing.expect(p3.y == -5);
-        try std.testing.expect(p3.z == 4);
+        const p3 = rot(p1, 0);
+        try std.testing.expect(p3.x == p1.x);
+        try std.testing.expect(p3.y == p1.y);
+        try std.testing.expect(p3.z == p1.z);
     }
     {
-        const p3 = rotDif(p1, p2, 5);
-        try std.testing.expect(p3.x == -10);
-        try std.testing.expect(p3.y == 5);
-        try std.testing.expect(p3.z == 4);
+        const p3 = rot(p1, 5);
+        try std.testing.expect(p3.x == -p1.x);
+        try std.testing.expect(p3.y == -p1.y);
+        try std.testing.expect(p3.z == p1.z);
     }
     {
-        const p3 = rotDif(p1, p2, 17);
-        try std.testing.expect(p3.x == 4);
-        try std.testing.expect(p3.y == -10);
-        try std.testing.expect(p3.z == 5);
+        const p3 = rot(p1, 17);
+        try std.testing.expect(p3.x == p1.z);
+        try std.testing.expect(p3.y == -p1.x);
+        try std.testing.expect(p3.z == -p1.y);
     }
 }
-
-pub fn solve(alloc: *std.mem.Allocator) !void {
-    var part1: i64 = 0;
-    var part2: u64 = 0;
-
-    var line_iter = try utils.LineIterator(.{.buffer_size = 5000}).init(utils.InputType{.file = "inputs/day19.txt"});
-    defer line_iter.deinit();
-
-    var scanners = ArrayList(Scanner).init(alloc);
-    defer {
-        for (scanners.items) |*item| {
-            item.pts.deinit();
-        }
-        scanners.deinit();
-    }
-
-    {var scidx: usize = 0; var pidx: usize = 0; while (try line_iter.next()) |line| {
-        if (line.len == 0) {
-            scidx += 1;
-            pidx = 0;
-            continue;
-        }
-        if (line[0] == '-' and line[1] == '-') {
-            const scan = Scanner {
-                .pts = ArrayList(Pt).init(alloc),
-                .checked = false,
-                .parent = null,
-                .dif = null,
-                .rot = null,
-                .origin = null,
-            };
-            try scanners.append(scan);
-            continue;
-        }
-        var tokens = std.mem.tokenize(line, ",");
-        try scanners.items[scidx].pts.append(Pt {
-            .x = try std.fmt.parseInt(isize, tokens.next().?, 10),
-            .y = try std.fmt.parseInt(isize, tokens.next().?, 10),
-            .z = try std.fmt.parseInt(isize, tokens.next().?, 10),
-        });
-        pidx += 1;
-    }}
-
-    var queue = ArrayList(usize).init(alloc);
-    defer queue.deinit();
-
-    try queue.append(0);
-    var zeroP = Pt{.x = 0, .y = 0, .z = 0};
-    scanners.items[0].origin = zeroP;
-
-    var rotated = HashSet(Pt).init(alloc);
-    defer rotated.deinit();
-
-    var uniq = HashSet(Pt).init(alloc);
-    defer uniq.deinit();
-
-    while (queue.items.len > 0) {
-        const scidx = queue.pop();
-        if (scanners.items[scidx].checked) continue;
-        scanners.items[scidx].checked = true;
-
-        sc_loop: for (scanners.items) |sc, oscidx| {
-            if (oscidx == scidx or sc.checked) continue;
-
-            for (scanners.items[scidx].pts.items) |p1, p1i| {
-                for (sc.pts.items) |p2, p2i| {
-                    var rot_idx: usize = 0;
-                    while (rot_idx < 24) : (rot_idx += 1) {
-                        const p2_rot = rot(p2, rot_idx);
-                        const dif = d(p2_rot, p1);
-                        rotated.clearRetainingCapacity();
-                        for (sc.pts.items) |p2_to_rot| {
-                            try rotated.put(d(rot(p2_to_rot, rot_idx), dif), {});
-                        }
-
-                        var possible: usize = scanners.items[scidx].pts.items.len;
-                        var cmn: usize = 0;
-                        for (scanners.items[scidx].pts.items) |p1_to_check| {
-                            if (rotated.contains(p1_to_check)) cmn += 1;
-                            possible -= 1;
-                            if (12 - cmn > possible) break;
-                        }
-
-                        if (cmn >= 12) {
-                            scanners.items[oscidx].parent = scidx;
-                            scanners.items[oscidx].dif = dif;
-                            scanners.items[oscidx].rot = rot_idx;
-
-                            var origin = zeroP;
-                            {var prev_parent = oscidx; while (scanners.items[prev_parent].parent) |pp| {
-                                origin = d(rot(origin, scanners.items[prev_parent].rot.?), scanners.items[prev_parent].dif.?);
-                                prev_parent = pp;
-                            }}
-                            scanners.items[oscidx].origin = origin;
-
-                            for (scanners.items[oscidx].pts.items) |pto| {
-                                var trans = pto;
-                                {var prev_parent = oscidx; while (scanners.items[prev_parent].parent) |pp| {
-                                    trans = d(rot(trans, scanners.items[prev_parent].rot.?), scanners.items[prev_parent].dif.?);
-                                    prev_parent = pp;
-                                }}
-                                try uniq.put(trans, {});
-                            }
-
-                            try queue.append(oscidx);
-                            continue :sc_loop;
-                        }
-                    }
-                }
-            }
-        }
-        //print("after {} -> {} uniq\n", .{scidx, uniq.count()});
-    }
-    for (scanners.items[0].pts.items) |pto| {
-        try uniq.put(pto, {});
-    }
-    part1 = @intCast(i64, uniq.count());
-
-    for (scanners.items) |sc1, i| {
-        for (scanners.items) |sc2, j| {
-            const d1 = std.math.absCast(sc1.origin.?.x - sc2.origin.?.x);
-            const d2 = std.math.absCast(sc1.origin.?.y - sc2.origin.?.y);
-            const d3 = std.math.absCast(sc1.origin.?.z - sc2.origin.?.z);
-            part2 = max(part2, d1 + d2 + d3);
-        }
-    }
-
-    print("Part1: {}, Part2: {}\n", .{part1, part2});
-}
-
