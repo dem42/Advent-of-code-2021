@@ -174,28 +174,25 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
         });
     }}
 
-    var queue = ArrayList(usize).init(alloc);
-    defer queue.deinit();
+    var stack = ArrayList(usize).init(alloc);
+    defer stack.deinit();
 
-    try queue.append(0);
+    try stack.append(0);
     var zeroP = Pt{.x = 0, .y = 0, .z = 0};
     scanners.items[0].origin = zeroP;
-
-    var rotated = HashSet(Pt).init(alloc);
-    defer rotated.deinit();
 
     var uniq = HashSet(Pt).init(alloc);
     defer uniq.deinit();
     var cnt_map = HashMap(Pt, u8).init(alloc);
     defer cnt_map.deinit();
 
-    while (queue.items.len > 0) {
-        const scidx = queue.pop();
+    while (stack.items.len > 0) {
+        const scidx = stack.pop();
         if (scanners.items[scidx].checked) continue;
         scanners.items[scidx].checked = true;
 
         sc_loop: for (scanners.items) |sc, oscidx| {
-            if (oscidx == scidx or sc.checked) continue;
+            if (sc.checked) continue;
 
             var rot_idx: usize = 0;
             while (rot_idx < 24) : (rot_idx += 1) {
@@ -226,7 +223,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
                         try uniq.put(trans, {});
                     }
 
-                    try queue.append(oscidx);
+                    try stack.append(oscidx);
                     continue :sc_loop;
                 }
             }
