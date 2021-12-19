@@ -71,7 +71,7 @@ fn dijkstra(width: isize, height: isize, grid: *Map2DNotOwning(CellData), alloc:
     return 0;
 }
 
-const MULT: usize = 5;
+const MULT: usize = 50;
 pub fn solve(alloc: *std.mem.Allocator) !void {
     var part1: u64 = 0;
     var part2: u64 = 0;
