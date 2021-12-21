@@ -3,6 +3,11 @@ const std = @import("std");
 ///////// String ///////////
 pub const String = std.ArrayList(u8);
 
+///////// HashSet ///////////
+fn AutoHashSet(comptime T: type) type {
+    return std.AutoHashMap(T, void);
+}
+
 ///////// Algorithms ///////////
 pub fn setDifference(left: anytype, right: @TypeOf(left)) @TypeOf(left) {
     var result = @TypeOf(left).initEmpty();

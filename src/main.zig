@@ -1,5 +1,5 @@
 const std = @import("std");
-const problem = @import("day19.zig");
+const problem = @import("day21.zig");
 
 pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -11,5 +11,11 @@ pub fn main() anyerror!void {
     }
 
     const allocator = &gpa.allocator;
+
+    // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    // defer arena.deinit();
+
+    // const allocator = &arena.allocator;
+
     try problem.solve(allocator);
 }

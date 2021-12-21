@@ -138,7 +138,7 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
     var part1: u64 = 0;
     var part2: u64 = 0;
 
-    var line_iter = try utils.LineIterator(.{.buffer_size = 5000}).init(utils.InputType{.file = "inputs/day19.txt"});
+    var line_iter = try utils.LineIterator(.{.buffer_size = 1024}).init(utils.InputType{.file = "inputs/day19.txt"});
     defer line_iter.deinit();
 
     var scanners = ArrayList(Scanner).init(alloc);
