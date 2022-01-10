@@ -16,7 +16,6 @@ const Timer = std.time.Timer;
 pub fn solve(alloc: *std.mem.Allocator) !void {
     var part1: u64 = 0;
     var part2: u64 = 0;
-
     var line_iter = try utils.LineIterator(.{.buffer_size = 1024}).init(utils.InputType{.file = "inputs/day20.txt"});
     defer line_iter.deinit();
 

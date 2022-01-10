@@ -26,6 +26,8 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
     var part1: u64 = 0;
     var part2: u64 = 0;
 
+    var timer = try Timer.start();
+
     var line_iter = try utils.LineIterator(.{.buffer_size = 1024}).init(utils.InputType{.file = "inputs/day21.txt"});
     defer line_iter.deinit();
 
@@ -111,4 +113,5 @@ pub fn solve(alloc: *std.mem.Allocator) !void {
     part2 = max(p1wins, p2wins);
 
     print("Part1: {}, Part2: {}\n", .{part1, part2});
+    print("=== Took === ({} µs) \n", .{timer.lap() / 1000});
 }
